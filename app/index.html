@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Employee Dashboard</title>
+<style>
+  :root {
+    --ink: #1b2a41;
+    --muted: #5d6b7e;
+    --paper: #f3f5f7;
+    --panel: #ffffff;
+    --line: #d9dfe6;
+    --accent: #0e7c86;
+    --accent-ink: #ffffff;
+    --danger: #b3261e;
+    --active: #1f8a4c;
+    --leave: #b7791f;
+    --inactive: #7b8794;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e6ebf2;
+      --muted: #9aa8ba;
+      --paper: #11171f;
+      --panel: #1a222d;
+      --line: #2c3745;
+      --accent: #3bb2bd;
+      --accent-ink: #0b1218;
+      --danger: #f2877f;
+      --active: #5fcf8d;
+      --leave: #e4b25a;
+      --inactive: #8d99a8;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.5 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 60px; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 28px; letter-spacing: -0.01em; font-weight: 600; }
+  .sub { margin: 2px 0 0; color: var(--muted); }
+  .pill {
+    font-size: 13px; padding: 4px 10px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+  }
+  .pill.ok { color: var(--active); border-color: var(--active); }
+  .pill.warn { color: var(--leave); border-color: var(--leave); }
+
+  .overview {
+    margin-top: 24px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 6px; padding: 20px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px;
+  }
+  @media (max-width: 760px) { .overview { grid-template-columns: 1fr; gap: 20px; } }
+  .total { font-size: 44px; font-weight: 600; line-height: 1; }
+  .total small { font-size: 15px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+  .bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--line); margin: 16px 0 10px; }
+  .bar span { display: block; height: 100%; transition: width .3s; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .dept-list { margin: 0; padding: 0; list-style: none; }
+  .dept-list li { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .dept-list li:last-child { border-bottom: 0; }
+  .dept-list h2 { font-size: 14px; margin: 0 0 6px; font-weight: 600; }
+
+  .toolbar { display: flex; gap: 10px; margin: 24px 0 12px; flex-wrap: wrap; }
+  .toolbar input, .toolbar select {
+    padding: 9px 12px; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--panel); color: var(--ink); font: inherit;
+  }
+  .toolbar input { flex: 1; min-width: 200px; }
+  button {
+    font: inherit; cursor: pointer; border-radius: 6px; padding: 9px 16px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+  }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button.danger { color: var(--danger); }
+  button:hover { filter: brightness(0.96); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .table-box { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 640px; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  th { font-size: 13px; color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: 0; }
+  td .email { color: var(--muted); font-size: 13px; }
+  td.actions { text-align: right; white-space: nowrap; }
+  td.actions button { padding: 5px 10px; font-size: 13px; margin-left: 6px; }
+  .tag { display: inline-flex; align-items: center; font-size: 13px; }
+  .empty { padding: 36px 16px; text-align: center; color: var(--muted); }
+
+  dialog {
+    border: 1px solid var(--line); border-radius: 8px; padding: 0; width: min(460px, 92vw);
+    background: var(--panel); color: var(--ink);
+  }
+  dialog::backdrop { background: rgba(10, 16, 24, .5); }
+  form { padding: 22px; display: grid; gap: 14px; }
+  form h2 { margin: 0; font-size: 20px; }
+  label { display: grid; gap: 5px; font-size: 14px; font-weight: 600; }
+  label input, label select {
+    padding: 9px 12px; border: 1px solid var(--line); border-radius: 6px;
+    background: var(--paper); color: var(--ink); font: inherit; font-weight: 400;
+  }
+  .form-error { color: var(--danger); font-size: 14px; min-height: 20px; margin: 0; }
+  .form-actions { display: flex; justify-content: flex-end; gap: 10px; }
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    background: var(--ink); color: var(--paper); padding: 10px 18px; border-radius: 6px;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .toast.show { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Employee dashboard</h1>
+      <p class="sub">Add, find and update the people in your organisation.</p>
+    </div>
+    <span id="storage" class="pill">Checking database…</span>
+  </header>
+
+  <section class="overview" aria-label="Overview">
+    <div>
+      <div class="total"><span id="total">0</span><small>employees</small></div>
+      <div class="bar" id="bar" role="img" aria-label="Status breakdown"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div>
+      <ul class="dept-list" id="depts"></ul>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="Search by name, email or role" aria-label="Search employees">
+    <select id="fDept" aria-label="Filter by department"><option value="">All departments</option></select>
+    <select id="fStatus" aria-label="Filter by status">
+      <option value="">All statuses</option>
+      <option value="active">Active</option>
+      <option value="on_leave">On leave</option>
+      <option value="inactive">Inactive</option>
+    </select>
+    <button class="primary" id="addBtn">Add employee</button>
+  </div>
+
+  <div class="table-box">
+    <table>
+      <thead><tr><th>Name</th><th>Department</th><th>Role</th><th>Status</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div id="empty" class="empty" hidden>No employees match. Add an employee to get started.</div>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <form id="form" method="dialog" novalidate>
+    <h2 id="dlgTitle">Add employee</h2>
+    <label>Full name <input name="name" required minlength="2" maxlength="80"></label>
+    <label>Email <input name="email" type="email" required maxlength="120"></label>
+    <label>Department <input name="department" required minlength="2" maxlength="60" list="deptOptions"></label>
+    <datalist id="deptOptions"></datalist>
+    <label>Role <input name="role" required minlength="2" maxlength="60"></label>
+    <label>Status
+      <select name="status">
+        <option value="active">Active</option>
+        <option value="on_leave">On leave</option>
+        <option value="inactive">Inactive</option>
+      </select>
+    </label>
+    <p class="form-error" id="formError" role="alert"></p>
+    <div class="form-actions">
+      <button type="button" id="cancelBtn">Cancel</button>
+      <button type="submit" class="primary" id="saveBtn">Save employee</button>
+    </div>
+  </form>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const API = "/api";
+const STATUS = {
+  active:   { label: "Active",   color: "var(--active)" },
+  on_leave: { label: "On leave", color: "var(--leave)" },
+  inactive: { label: "Inactive", color: "var(--inactive)" },
+};
+const $ = (id) => document.getElementById(id);
+let editingId = null;
+let timer = null;
+
+async function api(path, options) {
+  const res = await fetch(API + path, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+  if (res.status === 204) return null;
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    let msg = body.detail;
+    if (Array.isArray(msg)) msg = msg.map((e) => e.msg).join(", ");
+    throw new Error(msg || "Something went wrong");
+  }
+  return body;
+}
+
+function toast(text) {
+  const t = $("toast");
+  t.textContent = text;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+function el(tag, text, cls) {
+  const n = document.createElement(tag);
+  if (text !== undefined) n.textContent = text;
+  if (cls) n.className = cls;
+  return n;
+}
+
+async function loadHealth() {
+  const pill = $("storage");
+  try {
+    const h = await api("/health");
+    if (h.storage === "mongodb") {
+      pill.textContent = "Connected to MongoDB";
+      pill.className = "pill ok";
+    } else {
+      pill.textContent = "Temporary storage — MongoDB not connected";
+      pill.className = "pill warn";
+    }
+  } catch {
+    pill.textContent = "Server not reachable";
+    pill.className = "pill warn";
+  }
+}
+
+async function loadStats() {
+  const s = await api("/stats");
+  $("total").textContent = s.total;
+
+  const bar = $("bar"), legend = $("legend");
+  bar.replaceChildren(); legend.replaceChildren();
+  Object.entries(STATUS).forEach(([key, info]) => {
+    const n = s.by_status[key] || 0;
+    const seg = el("span");
+    seg.style.width = (s.total ? (n / s.total) * 100 : 0) + "%";
+    seg.style.background = info.color;
+    bar.appendChild(seg);
+    const item = el("span");
+    const dot = el("span", "", "dot");
+    dot.style.background = info.color;
+    item.append(dot, `${info.label} ${n}`);
+    legend.appendChild(item);
+  });
+
+  const depts = $("depts");
+  depts.replaceChildren();
+  const names = Object.keys(s.by_department).sort();
+  const heading = el("li");
+  heading.appendChild(el("h2", "By department"));
+  depts.appendChild(heading);
+  if (!names.length) {
+    depts.appendChild(el("li", "No departments yet"));
+  }
+  names.forEach((d) => {
+    const li = el("li");
+    li.append(el("span", d), el("strong", s.by_department[d]));
+    depts.appendChild(li);
+  });
+
+  // keep department filter + form suggestions in sync
+  const sel = $("fDept"), current = sel.value;
+  sel.replaceChildren(new Option("All departments", ""));
+  names.forEach((d) => sel.appendChild(new Option(d, d)));
+  sel.value = names.includes(current) ? current : "";
+  const dl = $("deptOptions");
+  dl.replaceChildren();
+  names.forEach((d) => dl.appendChild(new Option(d)));
+}
+
+async function loadRows() {
+  const params = new URLSearchParams({ limit: "200" });
+  if ($("search").value.trim()) params.set("q", $("search").value.trim());
+  if ($("fDept").value) params.set("department", $("fDept").value);
+  if ($("fStatus").value) params.set("status", $("fStatus").value);
+  const data = await api("/employees?" + params);
+
+  const tbody = $("rows");
+  tbody.replaceChildren();
+  $("empty").hidden = data.items.length > 0;
+
+  data.items.forEach((e) => {
+    const tr = el("tr");
+    const nameTd = el("td");
+    nameTd.append(el("div", e.name), el("div", e.email, "email"));
+
+    const info = STATUS[e.status] || STATUS.inactive;
+    const statusTd = el("td");
+    const tag = el("span", "", "tag");
+    const dot = el("span", "", "dot");
+    dot.style.background = info.color;
+    tag.append(dot, info.label);
+    statusTd.appendChild(tag);
+
+    const actions = el("td", "", "actions");
+    const edit = el("button", "Edit");
+    edit.addEventListener("click", () => openForm(e));
+    const del = el("button", "Delete", "danger");
+    del.addEventListener("click", () => removeEmployee(e));
+    actions.append(edit, del);
+
+    tr.append(nameTd, el("td", e.department), el("td", e.role), statusTd, actions);
+    tbody.appendChild(tr);
+  });
+}
+
+async function refresh() {
+  try {
+    await Promise.all([loadStats(), loadRows()]);
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
+function openForm(emp) {
+  editingId = emp ? emp.id : null;
+  $("dlgTitle").textContent = emp ? "Edit employee" : "Add employee";
+  $("formError").textContent = "";
+  const f = $("form");
+  f.elements['name'].value = emp ? emp.name : "";
+  f.email.value = emp ? emp.email : "";
+  f.department.value = emp ? emp.department : "";
+  f.role.value = emp ? emp.role : "";
+  f.status.value = emp ? emp.status : "active";
+  $("dlg").showModal();
+  f.elements['name'].focus();
+}
+
+async function removeEmployee(emp) {
+  if (!confirm(`Delete ${emp.name}? This cannot be undone.`)) return;
+  try {
+    await api("/employees/" + emp.id, { method: "DELETE" });
+    toast("Deleted");
+    refresh();
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
+$("form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const f = ev.target;
+  if (!f.reportValidity()) return;
+  const payload = {
+    name: f.elements['name'].value.trim(),
+    email: f.email.value.trim(),
+    department: f.department.value.trim(),
+    role: f.role.value.trim(),
+    status: f.status.value,
+  };
+  $("saveBtn").disabled = true;
+  try {
+    if (editingId) {
+      await api("/employees/" + editingId, { method: "PUT", body: JSON.stringify(payload) });
+    } else {
+      await api("/employees", { method: "POST", body: JSON.stringify(payload) });
+    }
+    $("dlg").close();
+    toast("Saved");
+    refresh();
+  } catch (err) {
+    $("formError").textContent = err.message;
+  } finally {
+    $("saveBtn").disabled = false;
+  }
+});
+
+$("addBtn").addEventListener("click", () => openForm(null));
+$("cancelBtn").addEventListener("click", () => $("dlg").close());
+$("search").addEventListener("input", () => {
+  clearTimeout(timer);
+  timer = setTimeout(loadRows, 250);
+});
+$("fDept").addEventListener("change", loadRows);
+$("fStatus").addEventListener("change", loadRows);
+
+loadHealth();
+refresh();
+</script>
+</body>
+</html>
